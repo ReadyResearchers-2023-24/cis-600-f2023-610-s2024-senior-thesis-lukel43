@@ -75,27 +75,25 @@ Direct any questions about issues to your first reader.
 
 # Introduction
 
-This chapter describes your completed senior thesis work,
-including the overall aims  and the background motivating your research. Whenever
-possible, you should use one or more concrete examples and technical diagrams.
-
-It is often useful and necessary to separate the introduction into multiple sections.
-Several possible sections are proposed below, you can use these or distribute your
-introductory text into sections in another way.
-
-The headings below propose _one way_ you might structure this section of the document.
+This thesis presents a detailed study and development of an application focused on sports betting odds, with an emphasis on identifying, optimizing, and notifying users about hedging opportunities. Hedging in sports betting involves placing wagers on both outcomes of a binary betting option to ensure a profit, irrespective of the final result. Such opportunities are found when the odds are structured so that the total payout exceeds the sum wagered.
 
 ## Motivation
 
+The impetus behind this research stems from two principal aims. The first is to analyze whether an algorithm-based approach to sports betting can enhance user profitability. This involves creating a systematic method for bettors to access comprehensive information, thereby reducing potential losses and mitigating betting risks. The second aim is to contribute to the body of knowledge in sports betting by conducting a historical analysis of betting odds. This part of the research aims to provide insights into the mechanics and strategic use of hedging bets. The overarching goal is to offer a tool that not only aids bettors in making more informed decisions but also helps in curbing the adverse effects of gambling, such as addiction and financial losses.
+
 ## Current State of the Art
+
+The landscape of sports betting research, particularly in the context of hedging strategies, is currently limited. Most of the available literature is focused on markets outside the United States, or it concentrates on predicting outcomes of sports events and identifying bets with favorable odds. This thesis distinguishes itself by not predicting outcomes or assessing odds fairness. Instead, it focuses on presenting users with profitable betting options based on current market conditions and data from the-odds-api. A significant aspect of this research is the historical analysis of sports betting odds, an area that has not been thoroughly explored in existing literature. This analysis extends beyond theoretical models, providing a practical examination of historical outcomes and trends in sports betting odds.
 
 ## Goals of the Project
 
+The thesis is structured around two primary objectives. The first is a comprehensive historical analysis to ascertain the occurrence and profitability of hedging opportunities in comparison to traditional betting strategies. This involves a systematic examination of past betting data to identify patterns and trends that could inform future betting strategies. The second objective is the development of an application that leverages this historical data to identify and notify users of hedging opportunities as they arise in real-time.
+
+The historical analysis portion of the thesis is critical. It not only contributes to the academic field by shedding light on various sports betting strategies and their effectiveness but also serves as a foundational element for the application. This analysis will explore questions such as the optimal timing for placing hedging bets and how these opportunities vary across different sports and betting environments. Furthermore, it will examine the financial implications of these strategies, providing a clear picture of their potential profitability.
+
 ## Ethical Implications
 
-This document requires that you discuss the ethical implications of your work -- no
-matter how benign you consider the outcome of your project. As several major studies
-of ethical issues in computer science assert: _no project is completely value-neutral_.
+This thesis acknowledges the significant ethical considerations inherent in sports betting. A primary concern is ensuring that the application and its recommendations do not inadvertently foster gambling addiction or encourage irresponsible betting practices. This involves a commitment to promoting responsible gambling, providing users with information that highlights safe betting habits and the potential risks associated with gambling. Compliance with legal and regulatory standards in sports betting is another crucial aspect of this research, ensuring that the project adheres to the ethical and legal frameworks governing the industry. By addressing these ethical issues, the thesis aims to make a positive contribution to the sports betting field, enhancing user experience while promoting responsible and ethical gambling practices.
 
 To assist you in elaborating on these issues, the following areas are topics you might
 consider addressing. You do not need to address all of them.
