@@ -1,78 +1,3 @@
-# Template description
-
-This repository contains the starter materials for your thesis in Computer
-Science 600 and 610 in Fall 2022  and Spring 2023 academic term. The main
-directory of this repository contains the Markdown template for a project that
-is designed for use with GitHub Classroom. To learn more about the course
-in which these assignments were completed, please refer to the `README.md` file.
-
-The template specifies various settings in the `config.yaml` file included in the
-repository. Change the appropriate values under the `Project-specific values`
-heading. Changing other values outside of that section may cause the project to
-fail to build. **Modify these values at your own risk.**
-
-Author your thesis in the `thesis.md` document using appropriate Markdown
-hierarchy and syntax; GitHub Actions will automatically create a PDF from the
-`abstract.md` and `proposal.md` files. Consult the `README` of the proposal
-repository to learn how to properly build and release this PDFs.
-
-## Citations and references
-
-Including references throughout requires a specific pseudo-Markdown tag, demonstrated
-in the following blockquote. (Inspect the `thesis.md` file to see the format.)
-
-> A citation, when included correctly, will appear as it does at the end of this
-> sentence. [@plaat1996research]
-
-## Labeling figures
-
-To label a figure (i.e. an image), referencing the image using correct Markdown
-will automatically caption the figure:
-
-```markdown
-![Label](images/IMAGE_NAME.png)
-```
-
-## Labeling tables
-
-To provide a label for a table, write a short caption for the table and prefix the caption
-with `Table:` as in the example below:
-
-```
-Table: A two-row table demonstrating tables
-
-|Row number | Description |
-|:----------|:------------|
-|1          |Row 1        |
-|2          |Row 2        |
-```
-
-## Other template information
-
-Two things specific to this template to also keep in mind:
-
-1. It is your responsibility to remove this description section before building
-the PDF version you plan to defend.
-2. References _will only appear if cited correctly_ in the text
-
-## Note on `LaTeX` commands
-
-Documents may include specific `LaTeX` commands _in Markdown_. To render these, surround the commands
-with markup denoting `LaTeX`. For example:
-
-```
-Checkmark character:   $\checkmark$
-Superscript character: $^{\dag}$
-```
-
-If using a special package not included in the template, add the desired `LaTeX`
-package or command/macro to the `header-includes` property in [config.yaml](config.yaml).
-
-Should this package not be included in the environment shipped with this template,
-you may also need to add the package to the [GitHub Actions Workflow](.github/workflows/main.yml).
-
-Direct any questions about issues to your first reader.
-
 # Introduction
 
 This thesis presents a detailed study and development of an application focused on sports betting odds, with an emphasis on identifying, optimizing, and notifying users about hedging opportunities. Hedging in sports betting involves placing wagers on both outcomes of a binary betting option to ensure a profit, irrespective of the final result. Such opportunities are found when the odds are structured so that the total payout exceeds the sum wagered. These opportunities typically occur during live betting situations, where a bettor places a bet either before or during a game, and due to events during hte game the odds change dramatically enough to allow the user to ensure profit by betting on the other option. Additionally, this thesis will also conduct a historical data analysis to determine the feasibility of this strategy, and when it makes sense for the bettor to hedge.
@@ -116,14 +41,21 @@ In addition, reflect on ways that the above harms can be or are mitigated by you
 
 # Related work
 
-This chapter includes a broad and detailed review of relevant existing work.
-The literature review should provide background and context for the thesis work.
-The subsections may be organized in whatever manner seems best suited to the material--
-chronological, or by topic, or according to some other criteria
-(e.g., primary versus secondary resources).
+Most of the research relevant to this topic has centered around the psychology of betting decisions and gambling addiction, attempts at algorithmically predicting outcomes, or inherent human biases that cloud sound betting decisions. My research works to learn from all of these works and add to sparsely available literature regarding sports betting. Through research it seems that the foundation for the vast majority of negative outcomes for casual bettors occur due to a lack of knowledge or understanding. Which is why my research focuses on providing bettors more information as to what their options are during a live betting situation and what actions will allow them to profit or protect themselves from losses the best.
 
-If ethical issues are central to this work, you should also address historical and
-contemporary issues or efforts made to address them.
+## Lack of Knowledge 
+
+The concept that many casual bettors can act against their own best interest due to a lack of knowledge has been explored before. Researches investigated the betting outcomes of a few particular bettors during the 2015-2016 English Premier League season, where Leicester FC had majorly outperformed expectations. They had started the season with 5000 to 1 odds to win the league, meaning a bettor could bet $1 to win $5000, and some people took this bet. As the season progressed and Leicester continued performing well, sportsbooks offered a cashout option on this bet allowing users to settle their bet for huge profits, but less than what they would receive if their bet wins. Of those interviewed, everyone who placed this bet took the cash out option which cost them a collective 8,173.47 that they would have earned had they hedged their bet instead of cashing out. The conclusion being, that users chose to take the cashout option because it is much easier to understand, and right there in their face on the betting app. [@NewallandCortis2019]
+
+This case study shows how bettors can make decisions detrimental to themselves due to a lack of knowledge surround what their options are. A common argument against hedging, is that more capital is required in order to place the hedge bet. However the line of thought that this could be a limiting factor, or potentially harmful to the bettor is not supported by sound logic. Firstly, my research is focused on the casual gambler, who uses sports betting to enhance their sport entertainment experience. In this case, a bettor would typically not be betting more than they can afford to hedge in order to receive guarenteed profits. Even in the case where a bettor has placed a bet so large that they cannot afford to hedge, in many cases they could take out a loan in order to hedge, and still profit after paying the interest on the loan. Fundamentally, the resistance to hedge is often linked to a lack of knowledge about the strategy. Which is why my research aims to simplify and inform bettors about hedging, and take much of the mental load and math involved in calculating a successful hedge off of the bettors shoulders.
+
+## Emotion Driven Betting
+
+In order to successfully produce a tool and data that is beneficial to bettors, it is crucial to have an understanding of the casual bettors' betting habits and what underlying factors drive their decisions. This is a very complex question that cannot be answered within the scope of this thesis. However there are themes and indicators that can be drawn from previous research that informs this work. Many of the pitfalls that casual sport bettors often fall into can be traced back fundamentally to them letting their emotions fuel their betting decisions rather than sound logic and math. This can lead to bettors making decisions against their own interest due to the heat of the moment exacerbated by the introduction and prevalence of live betting.
+
+Studies have shown that during live betting scenarios bettors will typically over react to positive events that occur during the game and place additional bets accordingly typically leading to losses, which causes the odds to move accordingly. [@MichelsOttingLangrock2023] This shows that most bettors are not able to accurately estimate the effect that in game events have on bet probabilities. While this research does not investigate how this relates to hedging strategies, it sheds light on some interesting phenomena. Firstly, it shows that bettors in aggregate typically over react to the in game events. Next, the odds of said bet then move accordingly due to the wave of incoming bets. This would indicate that at this point there is a discrepancy between the actual probability of an outcome, and the odds currently being offered. Which in theory, could be taken advantage of by a bettor.
+
+This particular occurance highlights a broader issue that bettors are often unable to correctly asses risk and reward, which hinders bettors' abilities to profit and make sound bets. While this is not eliminated by this work, the only way to decrease the prevalence of these circumstances is to provide bettors with more conclusive and comprehensive information about the consequences of their bets and the options available to them. Which is why this work provides bettors with another avenue to profit from their bets. While this tool does not provide comprehensive information, the use of this application will hopefully nudge users to be more thoughtful and informed in their bets, increasing overall performance.
 
 # Method of approach
 
