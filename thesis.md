@@ -26,19 +26,6 @@ These concerns are addressed by a few key strategies that aim to mitigate the ri
 
 This work and app are heavily limited by third-party risk, which can not be eliminated. Due to the lack of regulation around sports betting and the fact that the industry's progression is currently outpacing regulation it is hard to verify the accuracy of the odds data we are receiving. While conducting this research and testing my application I have manually verified the accuracy of the data I am receiving from *the-odds-api*, but this is in no way conclusive or comprehensive. Additionally, *the-odds-api* gives no information on how it is able to access all of the odds across different sportbooks, and makes no promises about the integrity or reliability of their data. [@theoddsapi23] This introduces a fundamental risk about the longevity and reliablility of the findings of this project and the long term maintainability of the application.However, throughout research and testing there have been no sings that the data is in any way inaccurate or compromised, but the risk still remains. Which means it must be acknowledged that this application can make no promises of 100 percent accuracy, and anyone who chooses to use the application should verify the accuracy of the data it provides **before** placing any wagers. Unfortunately, this is a problem inherent to the industry at this point in time. Even sportsbooks such as *DraftKings* will not offer any guarentees about the integrity of their own data and make sure to explicitly state as much in their terms of use. [@draftkings2023] This is a problem that cannot be avoided if any investigation into sportsbook odds data is conducted, thus my strategy of gathering and verifying data is as thorough as is possible at this point in time.
 
-To assist you in elaborating on these issues, the following areas are topics you might
-consider addressing. You do not need to address all of them.
-
-* Information Privacy
-* Information Accuracy (e.g. can contain reliability)
-* Potential Misuse (e.g. computer crime, unintended consequences)
-* Second- or Third-Party Risk (e.g. safety)
-* Data Collection Issues (e.g. issues inherent in collecting data)
-* Algorithmic or Data Bias
-* Potential Power Difference / Social Imbalance / Issues in Equity
-
-In addition, reflect on ways that the above harms can be or are mitigated by your work
-
 # Related work
 
 Most of the research relevant to this topic has centered around the psychology of betting decisions and gambling addiction, attempts at algorithmically predicting outcomes, or inherent human biases that cloud sound betting decisions. My research works to learn from all of these works and add to sparsely available literature regarding sports betting. Through research it seems that the foundation for the vast majority of negative outcomes for casual bettors occur due to a lack of knowledge or understanding. Which is why my research focuses on providing bettors more information as to what their options are during a live betting situation and what actions will allow them to profit or protect themselves from losses the best.
@@ -57,35 +44,28 @@ Studies have shown that during live betting scenarios bettors will typically ove
 
 This particular occurance highlights a broader issue that bettors are often unable to correctly asses risk and reward, which hinders bettors' abilities to profit and make sound bets. While this is not eliminated by this work, the only way to decrease the prevalence of these circumstances is to provide bettors with more conclusive and comprehensive information about the consequences of their bets and the options available to them. Which is why this work provides bettors with another avenue to profit from their bets. While this tool does not provide comprehensive information, the use of this application will hopefully nudge users to be more thoughtful and informed in their bets, increasing overall performance.
 
+## Arbitrage
+
+One distinction that needs to be clear is the terminology and phenomena that I am decribing throughout this research. There is a similar concept in the world of sports betting commonly referred to as arbitrage. However, this is not within the scope of the paper, nor commonly possible or legal in the United States. Arbitrage, as commonly defined is the concept of finding sportsbooks that have odds on the same event that vary enough that you can place bets on both side of the bet and profit instantaneously, due to the discrepancy in odds at one specific point in time. In Europe, this can also be done via secondary betting markets where a user can sell their position, however these markets are illegal in the United States. The concept of sports betting arbitrage for all intents and purposes can be compared to stock market arbitrage, a common investment strategy where an investor profits off of the price discrepancy between two different markets. 
+
+Hedging a bet on the otherhand, is when you take advantage of odds that are changed by events in the game, by betting on both sides of a bet. The concept of arbitrage is what spurred my interest into investing the implications of hedge betting within U.S. markets, but it is not the focal point of this paper, nor is it possible in the U.S. the same way it is in Europe.
+
+The concept using arbitrage to profit has been explored before. Researchers were able to secure a guarenteed 19.2% profit using an arbitrage strategy in 2012. [@egonetal2012arbitrage] Proving that artibrage is a very viable strategy. Which prompted my curiosity into whether similar results could be replicated using a bet hedging strategy. 
+
+## Lack of Research
+
+There is a very clear void in the current academic landscape when in comes to betting in the U.S. A variety of useful topics have been explored in Europe, however many of these findings are irrelevant to U.S. bettors due to different laws and regulations. Specifically when it comes to hedging strategies, it was veyr hard to find any reliable literature on the subject, especially within the context of U.S. betting laws. There is a variety of research into the pitfalls of gambling addiction when it comes to sports betting, and particularly how marketing and the advent of mobile sports betting has exacerbated problem gambling. [@KillickAndGriffiths2020] However, little research has been done into the efficacy of different betting strategies. As well as how third party tools could inform users and ward off some of the typical factors that enhance the addictive tendencies of sports betting.
+
+This makes this work even more crucial, because while the negative impacts of sports betting have been explored it is equally as important to research how these negative aspects can be curbed. One thing that related works have made clear, is that bettors do not often make sound betting decisions and that these decisions can lead to losses on behalf of the bettor. [@MichelsOttingLangrock2023] This raises concern for my work because unlike arbitrage, hedging relies on the bettor initally making a bet that aligns with the future outcome which has been shown to be difficult. However hedging provides an opportunity for users to capitalize on a sporting event taking a turn in their preferred direction by locking in profits before the event has a chance to turn the other way. This should provide more opportunity for the user to win. Additionally, by providing the user a tool to quickly be notified of these occurance, they will have opportunities for profit that are unavailable to those who look for opportunities manually or are unaware of hedging due to the rapidly changing nature of sports odds. There is also the fact that more information is always better, when it comes to making good betting decisions, so by providing users information on their options this will always be a net positive. Addditionally, due to the construction of the application users must take their attention away from the emotion fueling sportsbook apps in order to monitor hedging opportunities, which will cut down on many of the factors that fuel problem gambling that sportsbooks often try to spur.
+
 # Method of approach
 
-This chapter answers the "how" question - how did you complete your project,
-including the overall design of your study, details of the algorithms and tools you
-have used, etc.  Use technical diagrams, equations, algorithms, and paragraphs of text
-to describe the research that you have completed. Be sure to number all figures and
-tables and to explicitly refer to them in your text.
-
-This should contain:
-
-* lists
-* with points
-* and more points
-  * possibly subpoints
-
-For those projects whose implications address social or moral issues (i.e. ethical
-standards, causes, effects), you will want to use this section to describe how you
-actively mitigated or considered these issues.
 
 # Experiments
 
-This chapter describes your experimental set up and evaluation. It should also
-produce and describe the results of your study. The section titles below offer
-a typical structure used for this chapter.
 
 ## Experimental Design
 
-Especially as it pertains to responisble computing, if conducting experiments or
-evaluations that involve particular ethical considerations, detail those issues here.
 
 ## Evaluation
 
@@ -93,19 +73,11 @@ evaluations that involve particular ethical considerations, detail those issues 
 
 # Conclusion
 
-Traditionally, this chapter addresses the areas proposed below as sections, although
-not necessarily in this order or organized as offered. However, the last section --
-"Ethical Implcations" is required for this chapter. See the heading below for more
-details.
-
 ## Summary of Results
 
 ## Future Work
 
 ## Future Ethical Implications and Recommendations
-
-Especially as pertains to the public release or use of your software or methods, what
-unresolved or special issues remain? What recommendations might you make?
 
 ## Conclusions
 
