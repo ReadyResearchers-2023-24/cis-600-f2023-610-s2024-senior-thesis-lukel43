@@ -115,6 +115,62 @@ Part of the power of the-odds-api is the sheer amount of information that can be
 
 This flexibility and features that the API provide allow this program to leverage this information to make real-time analyses on every users bets all at once, which powers the effectiveness of this app. My application is then able to parse this data to find what points of data are relevent to the user and the bets that are already being tracked. Then it takes that data and performs calculations to determine where an arbitrage opportunity is possible, and what the most efficient arbitrage opportunity is.
 
+## Algorithms
+
+There are two important functions that power the applications ability to find hedging opportunities `hedge_finder()` and `calc_arb()`. These are the functions that allow the program to take in bets from the web interface and use the data from the API request to give the user information about potential hedging opportunities. The back-end of the app has been written in Python with the Flask framework to enable easy development, data handling, and algorithm implementation.
+
+First you have the `hedge_finder()` function that works like this:
+```py
+@app.route('/hedge-finder', methods=['POST', 'GET'])
+def hedge_finder():
+    bet_team = request.form['bet_team']
+    bet_odds = float(request.form['bet_odds'])
+    bet_amt = float(request.form['bet_amt'])
+    opp_odds, opp_team = get_opposing_teams_odds(bet_team)
+    api_odds = max(opp_odds) if opp_odds else 0
+
+    new_bet = Bet(bet_team=bet_team, bet_odds=bet_odds, bet_amount=bet_amt, user_id=current_user.id)
+    db.session.add(new_bet)
+    db.session.commit()
+
+    if check_arb(bet_team, bet_odds, api_odds) != False:
+        html_output = calc_arb(bet_odds, api_odds, bet_amt, bet_team, opp_team)
+    else:
+        html_output = f"<p>There is no arbitrage opportunity</p>"
+    return html_output
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
+```
+This function accepts both `POST` and `GET` requests, allowing it to both take data in from the web form, and return data to the web app about potential hedging opportunities. Within this function you will see it takes in all of the data from the web form about a users bet with `bet_team`, `bet_odds`, and `bet_amt` then uses that data to get the rest of the data it needs to make decisions about a hedge opportunity using the `get_opposing_teams_odds()` function. `get_opposing_teams_odds()` then uses the team name to find out who they are playing and what the other teams odds are on various bookmakers. It then finds the bookmaker with the most favorable odds to the user in order to try to get the user the most profit possible. Next, it stores all of this data about the bet in a database, tied to the user's user id so that if there is not a hedging opportunity available in the present moment it can try to find one later. Then, it uses the `check_arb()` function to see whether or not a hedging opportunity is available. If one is not available it simply relays that information to the user, however if one is it then runs the `calc_arb()` function to calculate the details of the hedging opportunity.
+
+The `calc_arb()` function works like this:
+
+```py
+def calc_arb(bet_odds, api_odds, bet_amt, bet_team, opp_team):
+    hedge_bet_amt = (bet_amt * bet_odds) / api_odds
+
+    total_bet_amt = bet_amt + hedge_bet_amt
+
+    profit_if_initial_bet_wins = bet_amt * bet_odds - total_bet_amt
+    profit_if_hedge_bet_wins = hedge_bet_amt * api_odds - total_bet_amt
+
+    guaranteed_profit = min(profit_if_initial_bet_wins, profit_if_hedge_bet_wins)
+
+    profit_percentage = (guaranteed_profit / total_bet_amt) * 100
+
+    html_output = "<h2>Hedging Calculation</h2>"
+    html_output += f"<p>Bet on {opp_team}: ${hedge_bet_amt:.2f}</p>"
+    html_output += f"<p>Total wager: ${total_bet_amt:.2f}</p>"
+    html_output += f"<p>Guaranteed profit: ${guaranteed_profit:.2f}</p>"    
+    html_output += f"<p>Profit percentage: {profit_percentage:.2f}%</p>"
+
+    return html_output
+```
+Once it receives all of the data about a bet from `hedge_finder()` it then does the math regarding what a user needs to in order to capitilize on this particular hedging opportunity. First, it finds out how much money the user should bet on the other team, then it uses that amount to calculate what their total stake would be after the hedge bet. Next, it calculates what their expected profit will be from this hedge bet, and what percentage profit they will make versus their initial stake. Finally it relays this information back to the web app, completing the cycle of finding an hedge opportunity.
+
 # Experiments
 
 
