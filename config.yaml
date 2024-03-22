@@ -2,11 +2,11 @@
 # https://maehr.github.io/academic-pandoc-template/
 
 # Project-specific values
-title: 'Senior Thesis'
-author: 'Student Name'
+title: 'Viability of Hedging Sports Bets'
+author: 'Luke Lacaria'
 date: '22 July 2022'
-firstreader: 'First Reader'
-secondreader: 'Second Reader'
+firstreader: 'Professor Luman'
+secondreader: 'Professor Bonham-Carter'
 logo: 'images/logo'
 
 # Template Values: DO NOT TOUCH

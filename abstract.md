@@ -1,7 +1,3 @@
 # Abstract
 
-Provide a concise summary of your proposed research of approximately 250
-words. The abstract does _not_ serve as or replace the introduction; consider
-it a summary of the entire document. It makes sense to wait to write the abstract
-until the rest of the document has been written. Write your abstract using
-the `abstract.md` file, and the template will automatically include it.
+This thesis presents the development of a software application designed to assist users in sports betting, with a specific focus on hedging strategies. Hedging in sports betting involves placing bets on both outcomes of binary betting options when the odds shift to guarantee a profit regardless of the final result. The study investigates methods to identify and optimize such opportunities where the total payout is greater than the total amount wagered. The thesis outlines the application's approach to analyzing betting odds, implementing algorithms for identifying profitable betting situations, and a comprehensive analysis of the profitability of this strategy. This research analyzes the probability and profitability of hedging during 63 randomly selected NBA games. The result is a theoretical exploration with practical application development, aiming to provide a tool that helps users make informed decisions in sports betting. This work contributes to the understanding of sports betting dynamics and offers a practical solution for users seeking to enhance their betting strategies through calculated and informed approaches.
