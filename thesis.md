@@ -64,14 +64,9 @@ Much of the previous literature around the topic of sports betting rightfully po
 
 Sports betting in specific, deserves more attention and research because of the interesting position that it finds itself in amongst the broader category of gambling. Most forms of gambling such as blackjack, craps, slot machines, and lottery tickets are inherently net negative games, meaning that even when played perfectly, the gambler will always lose money in the long run or in other words can never "beat the house". Sports betting on the other hand provides the potential to beat the house, because the house has no control over the outcomes of sporting events. The advantage that sportsbooks have over bettors is simply knowledge and scale and they have been able to use this advantage to profit handsomely. [@MichelsOttingLangrock2023] While the scale aspect cannot be addressed by research, the knowledge gap can. By closing the knowledge gap the playing field between bettors and sportsbooks can be closed, minimizing losses on the end of bettors. To provide bettors with information about implications and options when placing bets is to minimize the risks and harmful effects of betting while making it a more enjoyable experience for the bettor which is what this research accomplishes.
 
-# Method of approach
+# Method of approach    
 
-The approach of my research centers around the web application that facilitates the instant notification of opportunities to hedge your bet. The main technologies involved in the implementation of this app are Python and the-odds-api, with various supplemental technologies being used to facilitate the smooth development and functionality of the application. Here is an architectural diagram of my application:
-
-To be implemented:
-Poetry -> Python/Flask + the-odds-api -> SQL database for user data -> htmx front end -> Netlify hosting
-
-As shown above, my project uses Poetry to facilitate the easy management and installation of dependencies with Python. The bulk of the implementation of the web app and hedge opportunity finding algorithm are written using Python and Flask. This is the stage where user data is stored, bets are stored, and hedging opportunities are calculated with notifications being sent to the user via text. Data that is captured by the app are then stored in an SQL database to allow the data to be retrieved by the app later. Then, all of the necessary POST and GET requests are handled via htmx. Finally, the app is hosted using Netlify's hosting service.
+The method of my research centers around the application I have developed which facilitates the finding of hedging opportunities though a straight forward web interface. To accomplish this I used Python, Flask, HTMX, and SQLite. I used Python and Flask. Flask was particularly helpful because it enabled the easy integration of SQL databases, as well as recurring jobs using their APScheduler. Python was the obvious choice due to my familiarity with the language and its ability to enable the development of powerful applications quickly. HTMX was very helpful in developing the web portion because it enabled me to have all of the functionality I wanted on the front-end without having to overcomplicate my application with a ton of JavaScript code. Lastly, SQLite was the optimal database choice for this project because it allowed me to easy add, change and store data on the fly as the application evolved, and allowed for quick and easy querying to conduct my experiments. 
 
 ## Usage
 
@@ -113,59 +108,149 @@ This flexibility and features that the API provide allow this program to leverag
 
 ## Algorithms
 
-There are two important functions that power the applications ability to find hedging opportunities `hedge_finder()` and `calc_arb()`. These are the functions that allow the program to take in bets from the web interface and use the data from the API request to give the user information about potential hedging opportunities. The back-end of the app has been written in Python with the Flask framework to enable easy development, data handling, and algorithm implementation.
+There are three important functions that power the applications ability to find hedging opportunities `hedge_search()`, `hedge_find()`, `auto_hedge_check()`, and `calc_hedge()`. These are the functions that allow the program to take in bets from the web interface and use the data from the API request to give the user information about potential hedging opportunities. The back-end of the app has been written in Python with the Flask framework to enable easy development, data handling, and algorithm implementation.
 
-First you have the `hedge_finder()` function that works like this:
+First you have the `hedge_search()` function that works like this:
 ```py
-@app.route('/hedge-finder', methods=['POST', 'GET'])
-def hedge_finder():
+@app.route('/hedge-search', methods=['POST', 'GET'])
+def hedge_search():
     bet_team = request.form['bet_team']
+    opp_team = request.form['opp_team']
     bet_odds = float(request.form['bet_odds'])
     bet_amt = float(request.form['bet_amt'])
-    opp_odds, opp_team = get_opposing_teams_odds(bet_team)
-    api_odds = max(opp_odds) if opp_odds else 0
+    user_book = request.form['bookmaker']
+    target_arb_percent = float(request.form['target_arb_percent'])
+    events = get_odds_from_api()
 
-    new_bet = Bet(bet_team=bet_team, bet_odds=bet_odds, bet_amount=bet_amt, user_id=current_user.id)
+    hedge_data = hedge_find(bet_team, opp_team, bet_odds, bet_amt, user_book, target_arb_percent, events)
+    event_commence_time = hedge_data['commence_time']
+    html_output = generate_html_output(hedge_data)
+
+    # Create and save the new bet record
+    new_bet = Bet(bet_team=bet_team, opp_team=opp_team, bet_odds=bet_odds, bet_amount=bet_amt, bookmaker=user_book, target_arb_percent=target_arb_percent, commence_time=event_commence_time, user_id=current_user.id)
     db.session.add(new_bet)
     db.session.commit()
 
-    if check_arb(bet_team, bet_odds, api_odds) != False:
-        html_output = calc_arb(bet_odds, api_odds, bet_amt, bet_team, opp_team)
-    else:
-        html_output = f"<p>There is no arbitrage opportunity</p>"
     return html_output
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
 ```
-This function accepts both `POST` and `GET` requests, allowing it to both take data in from the web form, and return data to the web app about potential hedging opportunities. Within this function you will see it takes in all of the data from the web form about a users bet with `bet_team`, `bet_odds`, and `bet_amt` then uses that data to get the rest of the data it needs to make decisions about a hedge opportunity using the `get_opposing_teams_odds()` function. `get_opposing_teams_odds()` then uses the team name to find out who they are playing and what the other teams odds are on various bookmakers. It then finds the bookmaker with the most favorable odds to the user in order to try to get the user the most profit possible. Next, it stores all of this data about the bet in a database, tied to the user's user id so that if there is not a hedging opportunity available in the present moment it can try to find one later. Then, it uses the `check_arb()` function to see whether or not a hedging opportunity is available. If one is not available it simply relays that information to the user, however if one is it then runs the `calc_arb()` function to calculate the details of the hedging opportunity.
+This function accepts both `POST` and `GET` requests, allowing it to both take data in from the web form, and return data to the web app about potential hedging opportunities. Within this function you will see it takes in all of the data from the web form about a users bet with `bet_team`, `opp_team`, `bet_odds`, `bet_amt`, `bookmaker`, and `target_arb_percent` then stores this data in the database and uses it to find hedging opportunities. It then grabs the all of the current odds from the API, and uses this data to run the `hedge_find()` function to find any potential hedges for the given bet. 
 
-The `calc_arb()` function works like this:
+The `hedge_find()` function works like this:
 
 ```py
-def calc_arb(bet_odds, api_odds, bet_amt, bet_team, opp_team):
-    hedge_bet_amt = (bet_amt * bet_odds) / api_odds
+def hedge_find(bet_team, opp_team, bet_odds, bet_amt, user_book, target_arb_percent, events):
+    opp_odds_data, commence_time = get_opposing_teams_odds(events, bet_team, opp_team)
+    
+    if opp_odds_data is None:
+        return None
 
-    total_bet_amt = bet_amt + hedge_bet_amt
+    user_book_odds = opp_odds_data.get(user_book, 0)
+    best_book, best_odds = max(opp_odds_data.items(), key=lambda x: x[1], default=(None, 0))
 
-    profit_if_initial_bet_wins = bet_amt * bet_odds - total_bet_amt
-    profit_if_hedge_bet_wins = hedge_bet_amt * api_odds - total_bet_amt
+    hedge_data = {
+        'bet_team': bet_team,
+        'bet_odds': float(bet_odds),
+        'bet_amount': float(bet_amt),
+        'user_book': user_book,
+        'opp_team': opp_team,
+        'user_book_odds': float(user_book_odds),
+        'best_book': best_book,
+        'best_odds': float(best_odds),
+        'commence_time': commence_time
+    }
 
+    if check_hedge(bet_amt, bet_team, bet_odds, user_book_odds, target_arb_percent):
+        hedge_data['hedge_opportunity'] = True
+        hedge_data['hedge_book'] = user_book
+        hedge_data['hedge_odds'] = user_book_odds
+    elif user_book != best_book and check_hedge(bet_amt, bet_team, bet_odds, best_odds, target_arb_percent):
+        hedge_data['hedge_opportunity'] = True
+        hedge_data['hedge_book'] = best_book
+        hedge_data['hedge_odds'] = best_odds
+    else:
+        hedge_data['hedge_opportunity'] = False
+        hedge_data['hedge_book'] = user_book
+
+    return hedge_data
+```
+
+The `hedge_find()` function grabs the odds for the opponent team, then uses the `check_hedge()` function which compares the user odds to the opponent odds to see if a hedging opportunity is available. If it is, it sets the `hedge_opportunity` flag to true, and returns the hedging data. Then if a hedge is not found to hedge is stored in the database to be checked later. Which is done with the `auto_check_hedge()` function that works like so:
+
+```py
+def auto_hedge_check(app):
+    with app.app_context():
+        print("Auto hedge running...")
+        all_bets = Bet.query.all()
+        print(f"ALL BETS: {all_bets}")
+        filtered_bets = filter_recent_games(all_bets)
+        print(f"FILTERED BETS: {filtered_bets}")
+        if filtered_bets:
+            events = get_odds_from_api()
+            for bet in filtered_bets:
+                hedge_data = hedge_find(bet.bet_team, bet.opp_team, bet.bet_odds, bet.bet_amount, bet.bookmaker, bet.target_arb_percent, events)
+                if hedge_data and hedge_data['hedge_opportunity']:
+                    # Calculate hedge details
+                    hedge_data, _ = calc_hedge(hedge_data)
+                    print("Auto hedge found!")
+                    # Create a new hedge record
+                    print(hedge_data)
+                    new_hedge = Hedge(
+                        bet_team=hedge_data['bet_team'],
+                        bet_odds=hedge_data['bet_odds'],
+                        bet_amount=hedge_data['bet_amount'],
+                        user_book=hedge_data['user_book'],
+                        opp_team=hedge_data['opp_team'],
+                        hedge_book=hedge_data['hedge_book'],
+                        hedge_odds=hedge_data['hedge_odds'],
+                        hedge_bet_amt=hedge_data['hedge_bet_amt'],
+                        total_bet_amt=hedge_data['total_bet_amt'],
+                        guaranteed_profit=hedge_data['guaranteed_profit'],
+                        profit_percentage=hedge_data['profit_percentage'],
+                        user_id=bet.user_id,
+                        bet_id=bet.id
+                    )
+                    db.session.add(new_hedge)
+                db.session.commit()
+```
+
+This is the most crucial function to the application, it automatically runs every 5 minutes and grabs every bet from the database, filters out the bets on games that have already ended, grabs the odds from the API, then finds and calculates the hedges for every bet. When a hedge is found, it is automatically added to the `hedge` table in the database. The exact details of the hedge are calculated using the `calc_hedge()` function which works like so:
+
+```py
+def calc_hedge(hedge_data):
+    # Calculate the amount to bet on the opposing team
+    hedge_bet_amt = (hedge_data['bet_amount'] * hedge_data['bet_odds']) / hedge_data['hedge_odds']
+
+    # Calculate total bet amount
+    total_bet_amt = hedge_data['bet_amount'] + hedge_bet_amt
+
+    # Calculate profits
+    profit_if_initial_bet_wins = hedge_data['bet_amount'] * hedge_data['bet_odds'] - total_bet_amt
+    profit_if_hedge_bet_wins = hedge_bet_amt * hedge_data['hedge_odds'] - total_bet_amt
     guaranteed_profit = min(profit_if_initial_bet_wins, profit_if_hedge_bet_wins)
 
+    # Calculate profit percentage
     profit_percentage = (guaranteed_profit / total_bet_amt) * 100
 
+    # Update hedge_data dictionary
+    hedge_data.update({
+        'hedge_bet_amt': hedge_bet_amt,
+        'total_bet_amt': total_bet_amt,
+        'guaranteed_profit': guaranteed_profit,
+        'profit_percentage': profit_percentage
+    })
+
+    # Generate HTML output
     html_output = "<h2>Hedging Calculation</h2>"
-    html_output += f"<p>Bet on {opp_team}: ${hedge_bet_amt:.2f}</p>"
+    html_output += f"<p>Bet on {hedge_data['opp_team']}: ${hedge_bet_amt:.2f}</p>"
     html_output += f"<p>Total wager: ${total_bet_amt:.2f}</p>"
-    html_output += f"<p>Guaranteed profit: ${guaranteed_profit:.2f}</p>"    
+    html_output += f"<p>Guaranteed profit: ${guaranteed_profit:.2f}</p>"
     html_output += f"<p>Profit percentage: {profit_percentage:.2f}%</p>"
 
-    return html_output
+    return hedge_data, html_output
 ```
-Once it receives all of the data about a bet from `hedge_finder()` it then does the math regarding what a user needs to in order to capitilize on this particular hedging opportunity. First, it finds out how much money the user should bet on the other team, then it uses that amount to calculate what their total stake would be after the hedge bet. Next, it calculates what their expected profit will be from this hedge bet, and what percentage profit they will make versus their initial stake. Finally it relays this information back to the web app, completing the cycle of finding an hedge opportunity.
+
+This function takes in all of the data about a hedging opportunity and calculates the amount you should bet on the hedge, the total bet amount, the guarenteed profit, and the profit percentage. It uses this data to either send back to the `auto_hedge_find()` function to be stored in the database or produce html output to be displayed on the web.
+
 
 ## Technologies
 
@@ -191,7 +276,7 @@ In order to test the validitity of my application, as well as different hedging 
 
 This experiment was designed to provide a systematic overview of what hedging could look like in practice over the long term. To accomplish this, a large randomly selected set of games was chosen to bet on. The games that were used in this experiment were 63 random games that all occurred between February 28th 2024 and March 11th 2024. For every game in this sample 4 simulated $20 bets were placed for each team of every game. Four bets were used to simulate probably target profit percentages that a user might look for, those being 5, 25, 50, and 100 percent profit. These bets were all stored in a database, where the application reviewed all of the eligible bets every 5 minutes to search for a hedge opportunity, recording every opportunity as it was discovered. These profit percentage thresholds represent 4 different types of potential casual bettors the risk averse bettor, the slightly risk tolerant bettor, the risk tolerant bettor, and the risk seeking bettor. For the evaluation, these four subcategories were broken down once again into those who bet on underdogs and those who bet on favorites. This is because for one, it would be misleading to be evaluating hedging opportunities for two sides of the same game at once because no logical bettor would bet on both sides of a game before a hedging opportunity became available, but also because these are realistic betting strategies that give insights on when hedging makes sense.
 
-This setup enabled the evaluation of a variety of hedging strategies over a large sample of games. While it is still prone to variance, 504 bets over 63 different games gives us a fair level of confidence that our data is not heavily manipulated by extreme outliers. Additionally the NBA is the the major American sport where luck has the least influence on the outcome of the games [https://www.wired.com/2012/11/luck-and-skill-untangled-qa-with-michael-mauboussin/]. So this gives even further confidence that variance should be negligible. Using the data from these experiments the efficicacy and profitability of multiple hedging strategy that are symbolic of various types of casual bettors can be properly assessed.
+This setup enabled the evaluation of a variety of hedging strategies over a large sample of games. While it is still prone to variance, 504 bets over 63 different games gives us a fair level of confidence that our data is not heavily manipulated by extreme outliers. Additionally the NBA is the the major American sport where luck has the least influence on the outcome of the games. [@arbesman2012] So this gives even further confidence that variance should be negligible. Using the data from these experiments the efficicacy and profitability of multiple hedging strategy that are symbolic of various types of casual bettors can be properly assessed.
 
 ## Evaluation
 
@@ -255,7 +340,7 @@ WHERE
     bet.bet_odds >= 2 AND bet.target_arb_percent = 5;
 ```
 
-These results are able to paint a much clearer picture of how a bettor may fair if they stricly followed any of the previously outlined strategies. There are some caveats to this analysis. Firstly, it assumes that a bettor who choses a certain profit percentage will always decide to hedge at the first opportunity they are presented. Also, hedges were only searched for every 5 minutes, which means that there are likely more or less profitable hedging opportunities that were missed, particularly at the end of games where odds can swing wildly and quickly. Regardless, bettors betting only on favorites at 5, 25, 50 and 100 percent profit thresholds could expect -$0.76, -$1.07, -$1.29, and -$1.34 losses per bet respectively over the sample games. As is obvious all of these strategies yielded a net loss. Likewise, bettors who bet on only underdogs at the same thresholds could expect -$1.14, -$1.30, -$0.59, and -$0.18 losses per bet respectively over the sample games. While all of these strategies can expect losses, the results mirror that of the likelihood to find hedging opportunities for each of the given strategies. Also, betting on underdogs, especially at a high percentage profit threshold seems to be the ideal strategy. While it may seem like a fruitless strategy given that most of the strategies averaged somewhere between 2.5 and 6.5 percent losses, there is still value given the sportsbooks will offer odds at an 8 to 10 percent disadvantage at times.
+These results are able to paint a much clearer picture of how a bettor may fair if they stricly followed any of the previously outlined strategies. There are some caveats to this analysis. Firstly, it assumes that a bettor who choses a certain profit percentage will always decide to hedge at the first opportunity they are presented. Also, hedges were only searched for every 5 minutes, which means that there are likely more or less profitable hedging opportunities that were missed, particularly at the end of games where odds can swing wildly and quickly. Regardless, bettors betting only on favorites at 5, 25, 50 and 100 percent profit thresholds could expect -$0.76, -$1.07, -$1.29, and -$1.34 losses per bet respectively over the sample games. As is obvious all of these strategies yielded a net loss. Likewise, bettors who bet on only underdogs at the same thresholds could expect -$1.14, -$1.30, -$0.59, and -$0.18 losses per bet respectively over the sample games. While all of these strategies can expect losses, the results mirror that of the likelihood to find hedging opportunities for each of the given strategies. Also, betting on underdogs, especially at a high percentage profit threshold seems to be the ideal strategy. While it may seem like a fruitless strategy given that most of the strategies averaged somewhere between 2.5 and 6.5 percent losses, there is still value given the sportsbooks will offer odds at an 4.7 to 4.8 percent disadvantage at times. [@barnard2023] Which means these experiments are close to or beating the standard expected return.
 
 To provide a control a analysis of what would have happened had a user not hedged any of their bets during the same sample games was conducted. For this analysis, the bets were again split by underdog and favorite bets. This was accomplished using this query:
 
@@ -285,14 +370,33 @@ There are many factors that could call the results of these experiments into que
 
 # Conclusion
 
+This research provides additional insights into the world of casual sports betting. In doing so, it presents another feasible option for small stakes users who wish to have more control and information during their sports betting sessions. It also reduces the need for a bettor to remain on their sportsbook app at all times to have up to date, reliable, actionable information, which should reduce the inclination to bet problematically. Also this research investigates the possibilities of what innovative applications and strategies can be developed using the wealth of real time knowledge offered by odds APIs, and how they can be used to reduce the house's edge.
+
 ## Summary of Results
+
+The results of this application and the experiments indicate that there is potential value in hedging strategies, but this value is not present in all cases. Nor is hedging a particularly effective blanket strategy. However, the application and the results prove that odds APIs can serve as a backbone for powerful large scale applications and that more intricate and informed strategies that utilize hedging and odds APIs may be more effective. The automated detection of hedging opportunities is a topic that has not been explored before, and the results of this application and experiment show that it is an area worth exploring further.
+
+The results of the experiment specifically show that the hedging as whole when done en mass without a broader strategy is typically a net neutral endeavor. However, there are also minor indicators that strategies that utilize betting on underdogs, especially at high target profit percentages have the highest likelihood to be profitable.
 
 ## Future Work
 
+There are many ways that these topics can be explored forward moving forward. Mainly, it would be very beneficial for this research to be conducted over a longer period of time with more resources. One of the main limiting factors of this research was the cap on API calls. If data could be pulled more frequently it would result in more accurate data. Likewise, it would be beneficial to test more strategies at different target profit percentage, as well as different samples of games, from other sports leagues as well. It remains unknown whether the results achieved through these studies would hold true in other sports leagues. Answering this question would determine whether my results are specific to basketball or if it is a sports betting wide phenomena. 
+
+Another interesting way that hedging strategies could be epxlored would be to test this application with real users, and see how user behavior affects the profitability and likelihood of hedging opportunities occuring. Within this, it could be investigated how often a typical user choses to hedge, and how often that is the beneficial choice. In this work it is assumed that a simulated user will bet and hedge the same way every single time, which is unlikely to happen with real users. So it would be very insightful to see how real users would use, and profit from this application.
+
+One additional avenue that could be explored is hedgin non binary bets, or bets with multiple outcomes. This would complicate the calculations and hedging strategies, but is still possible nonetheless as long as all outcomes are able to be bet on. There has bene a growing interest in parlays and sportsbetting has become more mainstream, and with it the ability to hedge these parlays. [@nuwwarah2024] Another example of this is betting future, like player awards or tournament results, where hedging can be extremely lucrative if your pick makes it far in the tournament. [@santaromita2022] So an investigation into different hedging strategies with these types of bets could add even more value.
+
 ## Future Ethical Implications and Recommendations
+
+If this application were to be adopted by a large user base, the obvious question of whether this could encourage gambling addiction remains. However, this is doubtful due to the research that suggests that the design of the sportsbook apps and user activity on the sportsbook apps is the main driver of problematic sports betting. [@KillickAndGriffiths2020] Whereas my app uses a simplistic straight forward layout and does not accept or facilitate the exchange of money or sports bets in any way. It simply relays information
+
+Another concern, is the third party risk of relying on the-odds-api, as the app survives longer and grows. Firstly, with more users there will be more API requests which drives up costs. Additionally, without some sort of verification process there is no way to guarentee that the API will provide accurate odds indefinitely going into the future. For this app to be scaled up, it might make sense to take data from an additional API and compare the results to each other before presenting them to users in order to further validate the odds.
 
 ## Conclusions
 
+The overarching goal of this research is to provide more information to casual sports bettors, and explore a new under-researched strategy for sports betting. Though the strategies specifically explored in this experiment turned out to be roughly a net neutral many valueable insights were gained that warrant further investigation. For one, underdog bets being the favorable option to betting the favorite in nearly every experiment is interesting and confounding. These experiments show that hedging is a viable strategy, even though throughout the studies it resulted to be largely neutral, this is not unexpected considering our experiment did not take into account any other outside strategies that have been shown to boost the odds for the bettor.
+
+Additionally, this application and research should inform and enable the casual sports bettor to make more informed decisions when placing their bets. As discussed, many of the causes of losses and addiction in gambling can be traced back to a lack of information and understand, and being overwhelmed by the options offered by sportsbooks. This application both reduces the users' options and decision points, while also providing accurate up to date information and showcasing profitable opportunities. All together, this should lead to a safer, simpler, more enjoyable sports viewing and betting experience for the casual user, while revealing a lesser known betting strategy to a wider audience.
 
 # References
 
