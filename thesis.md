@@ -280,89 +280,21 @@ This setup enabled the evaluation of a variety of hedging strategies over a larg
 
 ## Evaluation
 
-The key to my evaluation strategy revolves around analyzing underdog bettors, and favorite bettors, and comparing their simulated results as well as the results of those who don't hedge. This was done by simulating the outcomes of every bet that was simulated throughout the experiment and grouping them into different strategies to see which would fair the best over the sample games. First I analyzed what percentage of bets found any hedge at all for each respective profit threshold using this query:
+The key to my evaluation strategy revolves around analyzing underdog bettors, and favorite bettors, and comparing their simulated results as well as the results of those who don't hedge. This was done by simulating the outcomes of every bet that was simulated throughout the experiment and grouping them into different strategies to see which would fair the best over the sample games. First I analyzed what percentage of bets found any hedge at all for each respective profit threshold.
 
-```sql
-SELECT 
-    (COUNT(DISTINCT hedge.bet_id) * 100.0 / COUNT(DISTINCT bet.id)) AS percentage_with_hedge
-FROM 
-    bet
-LEFT JOIN 
-    hedge ON bet.id = hedge.bet_id
-WHERE 
-    bet.target_arb_percent = 5;
-```
+![Bets That Found Hedges](images/bets-that-found-hedges.png)
 
-The results show that the 5, 25, 50 and 100 percent profit threshold bets found a hedge 78.57, 48.41, 29.36, and 14.28 percent of the time respectively. This results suggest that hedging opportunities are fairly common especially those with a low-medium profit potential. Additionally it shows that highly profitable hedges are unlikely, they aren't exactly rare either. Keep in mind, that these profit thresholds are a minimum, so the 5 percent profit threshold includes all hedges up to 24.9 percent profit and so on. Granted these results include both sides of a bet from the same game, so they are slightly unrealistic, but still valuable. To account for this, and to simulate a more realistic betting strategy and environment the bets were split into two categories. One being underdog bets, meaning bets on the team less likely to win, and favorite bets, bets on the team that is more likely to win. This was done using this query:
+The results show that the 5, 25, 50 and 100 percent profit threshold bets found a hedge 78.57, 48.41, 29.36, and 14.28 percent of the time respectively. This results suggest that hedging opportunities are fairly common especially those with a low-medium profit potential. Additionally it shows that highly profitable hedges are unlikely, they aren't exactly rare either. Keep in mind, that these profit thresholds are a minimum, so the 5 percent profit threshold includes all hedges up to 24.9 percent profit and so on. Granted these results include both sides of a bet from the same game, so they are slightly unrealistic, but still valuable. To account for this, and to simulate a more realistic betting strategy and environment the bets were split into two categories. One being underdog bets, meaning bets on the team less likely to win, and favorite bets, bets on the team that is more likely to win.
 
-```sql
-SELECT 
-    CASE 
-        WHEN bet.bet_odds < 2 THEN 'Favorite'
-        ELSE 'Underdog'
-    END AS bet_category,
-    COUNT(DISTINCT CASE WHEN hedge.bet_id IS NOT NULL THEN bet.id END) * 100.0 / COUNT(DISTINCT bet.id) AS percentage_with_hedge
-FROM 
-    bet
-LEFT JOIN 
-    hedge ON bet.id = hedge.bet_id
-WHERE 
-    bet.target_arb_percent = 5
-GROUP BY 
-    bet_category;
-```
+![Bets That Found Hedges](images/bets-that-found-hedges-categorized.png)
 
-This analysis provided more interesting insights on what strategies may be more or less viable. Bets on the favorite team at 5, 25, 50 and 100 percent target profit thresholds were able to find a hedging opportunity 86.15, 47.69, 18.46, and 0 percent of the time respectively. As you may have noticed teams that are the favorite at the beginning of the game are much more likely to yield minor hedging opportunities, but extremely rarely yield high profit hedging opportunities. This is due to the fact that bets on the favorite yield much lower profits to begin with, so the favorite doing well, which is traditionally what would create hedging opportunities has much less room to create profit via a hedge due to the diminishing returns as the profit for betting on the favorite approaches 0. On the other hand, underdog bets at the 5, 25, 50, and 100 percent profit thresholds created a hedging opportunity 70.49, 49.18, 40.98 and 29.51 percent of the time respectively. Thus, it is slightly less likely for underdogs to find hedging opportunities at the lower thresholds when compared to favorites, however it is far more likely for underdogs to create highly profitable hedging opportunities. This is due to the fact that underdogs are far more likely to get blown out from the start of the game when compared to favorites, which would eliminate hedging opportunities. On the other hand, when underdogs perform well the odds shift much more drastically, allowing for much greater profits through hedging. These results suggest that more risk tolerant bettors may want to consider betting on favorites, whereas risk seeking bettors may want to bet on underdogs. However, these results offer very vague insights without investigating the potential profitability of these strategies. To capture this, the theoretical profitability of these strategies was analyzed using this query:
+This analysis provided more interesting insights on what strategies may be more or less viable. Bets on the favorite team at 5, 25, 50 and 100 percent target profit thresholds were able to find a hedging opportunity 86.15, 47.69, 18.46, and 0 percent of the time respectively. As you may have noticed teams that are the favorite at the beginning of the game are much more likely to yield minor hedging opportunities, but extremely rarely yield high profit hedging opportunities. This is due to the fact that bets on the favorite yield much lower profits to begin with, so the favorite doing well, which is traditionally what would create hedging opportunities has much less room to create profit via a hedge due to the diminishing returns as the profit for betting on the favorite approaches 0. On the other hand, underdog bets at the 5, 25, 50, and 100 percent profit thresholds created a hedging opportunity 70.49, 49.18, 40.98 and 29.51 percent of the time respectively. Thus, it is slightly less likely for underdogs to find hedging opportunities at the lower thresholds when compared to favorites, however it is far more likely for underdogs to create highly profitable hedging opportunities. This is due to the fact that underdogs are far more likely to get blown out from the start of the game when compared to favorites, which would eliminate hedging opportunities. On the other hand, when underdogs perform well the odds shift much more drastically, allowing for much greater profits through hedging. These results suggest that more risk tolerant bettors may want to consider betting on favorites, whereas risk seeking bettors may want to bet on underdogs. However, these results offer very vague insights without investigating the potential profitability of these strategies. To capture this, the theoretical profitability of these strategies was analyzed.
 
-```sql
-SELECT 
-    AVG(
-        CASE 
-            WHEN first_hedge.bet_id IS NOT NULL THEN
-                -- Use the guaranteed profit from the first hedge
-                first_hedge.guaranteed_profit
-            WHEN bet.winner = bet.bet_team THEN
-                -- Profit for winning bets without a hedge
-                (bet.bet_amount * bet.bet_odds - bet.bet_amount)
-            ELSE 
-                -- Full loss for losing bets without a hedge
-                -bet.bet_amount
-        END
-    ) AS avg_expected_profit
-FROM 
-    bet
-LEFT JOIN 
-    (SELECT MIN(id) AS first_hedge_id, bet_id FROM hedge GROUP BY bet_id) first_hedge_id 
-    ON bet.id = first_hedge_id.bet_id
-LEFT JOIN 
-    hedge first_hedge ON first_hedge.id = first_hedge_id.first_hedge_id
-WHERE 
-    bet.bet_odds >= 2 AND bet.target_arb_percent = 5;
-```
+![Bets That Found Hedges](images/expected-profit-categorized.png)
 
 These results are able to paint a much clearer picture of how a bettor may fair if they strictly followed any of the previously outlined strategies. There are some caveats to this analysis. Firstly, it assumes that a bettor who chooses a certain profit percentage will always decide to hedge at the first opportunity they are presented. Also, hedges were only searched for every 5 minutes, which means that there are likely more or less profitable hedging opportunities that were missed, particularly at the end of games where odds can swing wildly and quickly. Regardless, bettors betting only on favorites at 5, 25, 50 and 100 percent profit thresholds could expect -$0.76, -$1.07, -$1.29, and -$1.34 losses per bet respectively over the sample games. As is obvious all of these strategies yielded a net loss. Likewise, bettors who bet on only underdogs at the same thresholds could expect -$1.14, -$1.30, -$0.59, and -$0.18 losses per bet respectively over the sample games. While all of these strategies can expect losses, the results mirror that of the likelihood to find hedging opportunities for each of the given strategies. Also, betting on underdogs, especially at a high percentage profit threshold seems to be the ideal strategy. While it may seem like a fruitless strategy given that most of the strategies averaged somewhere between 2.5 and 6.5 percent losses, there is still value given the sportsbooks will offer odds at an 4.7 to 4.8 percent disadvantage at times. [@barnard2023] Which means these experiments are close to or beating the standard expected return.
 
-To provide a control an analysis of what would have happened had a user not hedged any of their bets during the same sample games was conducted. For this analysis, the bets were again split by underdog and favorite bets. This was accomplished using this query:
-
-```sql
-SELECT 
-    CASE 
-        WHEN bet_odds < 2 THEN 'Favorite'
-        ELSE 'Underdog'
-    END AS bet_category,
-    AVG(
-        CASE 
-            WHEN winner = bet_team THEN (bet_amount * bet_odds - bet_amount)
-            ELSE -bet_amount
-        END
-    ) AS avg_expected_profit
-FROM 
-    bet
-GROUP BY 
-    bet_category;
-```
-
-This was done in an attempt to discover whether or not hedging can provide an advantage when compared to simply making bets and living with the outcome. The analysis showed that those who bet on every favorite during these sample games can expect to average a -$1.70 loss per bet. Whereas those who bet on every underdog can expect a $0.23 profit per bet over the sample games. These results seem to indicate that there is a decent advantage when it comes to betting on underdogs that holds true whether you decide to hedge or not. However, not hedging at all was the only strategy that had a category profit. On the other hand, never hedging when betting favorites yielded worse results than all of the favorite betting hedging strategies. This seems to indicate that hedging may be a beneficial strategy when betting favorites, and a detrimental strategy when betting underdogs. Though, the change in results is so small that it may be attributable to pure variance. However, underdogs bets outperformed favorite bets in almost every simulation, so it seems to hold true that betting underdogs may be a slightly beneficial strategy.
+To provide a control an analysis of what would have happened had a user not hedged any of their bets during the same sample games was conducted. For this analysis, the bets were again split by underdog and favorite bets. This was done in an attempt to discover whether or not hedging can provide an advantage when compared to simply making bets and living with the outcome. The analysis showed that those who bet on every favorite during these sample games can expect to average a -$1.70 loss per bet. Whereas those who bet on every underdog can expect a $0.23 profit per bet over the sample games. These results seem to indicate that there is a decent advantage when it comes to betting on underdogs that holds true whether you decide to hedge or not. However, not hedging at all was the only strategy that had a category profit. On the other hand, never hedging when betting favorites yielded worse results than all of the favorite betting hedging strategies. This seems to indicate that hedging may be a beneficial strategy when betting favorites, and a detrimental strategy when betting underdogs. Though, the change in results is so small that it may be attributable to pure variance. However, underdogs bets outperformed favorite bets in almost every simulation, so it seems to hold true that betting underdogs may be a slightly beneficial strategy.
 
 ## Threats to Validity
 
