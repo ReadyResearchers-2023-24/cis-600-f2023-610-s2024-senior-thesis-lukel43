@@ -106,148 +106,19 @@ Part of the power of the-odds-api is the sheer amount of information that can be
 
 This flexibility and features that the API provide allow this program to leverage this information to make real-time analyses on every users bets all at once, which powers the effectiveness of this app. My application is then able to parse this data to find what points of data are relevant to the user and the bets that are already being tracked. Then it takes that data and performs calculations to determine where an arbitrage opportunity is possible, and what the most efficient arbitrage opportunity is.
 
-## Algorithms
+## Implementation
 
-There are three important functions that power the application's ability to find hedging opportunities `hedge_search()`, `hedge_find()`, `auto_hedge_check()`, and `calc_hedge()`. These are the functions that allow the program to take in bets from the web interface and use the data from the API request to give the user information about potential hedging opportunities. The back-end of the app has been written in Python with the Flask framework to enable easy development, data handling, and algorithm implementation.
+There are three important functions that power the application's ability to find hedging opportunities `hedge_search()`, `hedge_find()`, `auto_hedge_check()`, and `calc_hedge()`. These are the functions that allow the program to take in bets from the web interface and use the data from the API request to give the user information about potential hedging opportunities. The back-end of the app has been written in Python with the Flask framework to enable easy development, data handling, and algorithm implementation. Here is a very high level overview of how the application flows.
 
-First you have the `hedge_search()` function that works like this:
-```py
-@app.route('/hedge-search', methods=['POST', 'GET'])
-def hedge_search():
-    bet_team = request.form['bet_team']
-    opp_team = request.form['opp_team']
-    bet_odds = float(request.form['bet_odds'])
-    bet_amt = float(request.form['bet_amt'])
-    user_book = request.form['bookmaker']
-    target_arb_percent = float(request.form['target_arb_percent'])
-    events = get_odds_from_api()
+![Implementation Overview](images/comp-diagram.png)
 
-    hedge_data = hedge_find(bet_team, opp_team, bet_odds, bet_amt, user_book, target_arb_percent, events)
-    event_commence_time = hedge_data['commence_time']
-    html_output = generate_html_output(hedge_data)
+As shown the app is powered by a Python and Flask backend which creates a web app for users to interact with this program. Then the data gathered from the users via the web app is then stored in an SQLite database. The application is then able to use that data to find hedges for all users and store these hedging opportunities in the database. There are a few key functions that are able to drive this application and find and calculate hedges for users. This is a diagram of how the app works and interacts slightly simplified for clarity.
 
-    # Create and save the new bet record
-    new_bet = Bet(bet_team=bet_team, opp_team=opp_team, bet_odds=bet_odds, bet_amount=bet_amt, bookmaker=user_book, target_arb_percent=target_arb_percent, commence_time=event_commence_time, user_id=current_user.id)
-    db.session.add(new_bet)
-    db.session.commit()
+![Implementation Overview](images/app-diagram.png)
 
-    return html_output
-```
-This function accepts both `POST` and `GET` requests, allowing it to both take data in from the web form, and return data to the web app about potential hedging opportunities. Within this function you will see it takes in all of the data from the web form about a users bet with `bet_team`, `opp_team`, `bet_odds`, `bet_amt`, `bookmaker`, and `target_arb_percent` then stores this data in the database and uses it to find hedging opportunities. It then grabs the all of the current odds from the API, and uses this data to run the `hedge_find()` function to find any potential hedges for the given bet. 
-
-The `hedge_find()` function works like this:
-
-```py
-def hedge_find(bet_team, opp_team, bet_odds, bet_amt, user_book, target_arb_percent, events):
-    opp_odds_data, commence_time = get_opposing_teams_odds(events, bet_team, opp_team)
-    
-    if opp_odds_data is None:
-        return None
-
-    user_book_odds = opp_odds_data.get(user_book, 0)
-    best_book, best_odds = max(opp_odds_data.items(), key=lambda x: x[1], default=(None, 0))
-
-    hedge_data = {
-        'bet_team': bet_team,
-        'bet_odds': float(bet_odds),
-        'bet_amount': float(bet_amt),
-        'user_book': user_book,
-        'opp_team': opp_team,
-        'user_book_odds': float(user_book_odds),
-        'best_book': best_book,
-        'best_odds': float(best_odds),
-        'commence_time': commence_time
-    }
-
-    if check_hedge(bet_amt, bet_team, bet_odds, user_book_odds, target_arb_percent):
-        hedge_data['hedge_opportunity'] = True
-        hedge_data['hedge_book'] = user_book
-        hedge_data['hedge_odds'] = user_book_odds
-    elif user_book != best_book and check_hedge(bet_amt, bet_team, bet_odds, best_odds, target_arb_percent):
-        hedge_data['hedge_opportunity'] = True
-        hedge_data['hedge_book'] = best_book
-        hedge_data['hedge_odds'] = best_odds
-    else:
-        hedge_data['hedge_opportunity'] = False
-        hedge_data['hedge_book'] = user_book
-
-    return hedge_data
-```
+The `hedge_search()` function accepts both `POST` and `GET` requests, allowing it to both take data in from the web form, and return data to the web app about potential hedging opportunities. Within this function you will see it takes in all of the data from the web form about a users bet with `bet_team`, `opp_team`, `bet_odds`, `bet_amt`, `bookmaker`, and `target_arb_percent` then stores this data in the database and uses it to find hedging opportunities. It then grabs the all of the current odds from the API, and uses this data to run the `hedge_find()` function to find any potential hedges for the given bet. 
 
 The `hedge_find()` function grabs the odds for the opponent team, then uses the `check_hedge()` function which compares the user odds to the opponent odds to see if a hedging opportunity is available. If it is, it sets the `hedge_opportunity` flag to true, and returns the hedging data. Then if a hedge is not found to hedge is stored in the database to be checked later. Which is done with the `auto_check_hedge()` function that works like so:
-
-```py
-def auto_hedge_check(app):
-    with app.app_context():
-        print("Auto hedge running...")
-        all_bets = Bet.query.all()
-        print(f"ALL BETS: {all_bets}")
-        filtered_bets = filter_recent_games(all_bets)
-        print(f"FILTERED BETS: {filtered_bets}")
-        if filtered_bets:
-            events = get_odds_from_api()
-            for bet in filtered_bets:
-                hedge_data = hedge_find(bet.bet_team, bet.opp_team, bet.bet_odds, bet.bet_amount, bet.bookmaker, bet.target_arb_percent, events)
-                if hedge_data and hedge_data['hedge_opportunity']:
-                    # Calculate hedge details
-                    hedge_data, _ = calc_hedge(hedge_data)
-                    print("Auto hedge found!")
-                    # Create a new hedge record
-                    print(hedge_data)
-                    new_hedge = Hedge(
-                        bet_team=hedge_data['bet_team'],
-                        bet_odds=hedge_data['bet_odds'],
-                        bet_amount=hedge_data['bet_amount'],
-                        user_book=hedge_data['user_book'],
-                        opp_team=hedge_data['opp_team'],
-                        hedge_book=hedge_data['hedge_book'],
-                        hedge_odds=hedge_data['hedge_odds'],
-                        hedge_bet_amt=hedge_data['hedge_bet_amt'],
-                        total_bet_amt=hedge_data['total_bet_amt'],
-                        guaranteed_profit=hedge_data['guaranteed_profit'],
-                        profit_percentage=hedge_data['profit_percentage'],
-                        user_id=bet.user_id,
-                        bet_id=bet.id
-                    )
-                    db.session.add(new_hedge)
-                db.session.commit()
-```
-
-This is the most crucial function of the application, it automatically runs every 5 minutes and grabs every bet from the database, filters out the bets on games that have already ended, grabs the odds from the API, then finds and calculates the hedges for every bet. When a hedge is found, it is automatically added to the `hedge` table in the database. The exact details of the hedge are calculated using the `calc_hedge()` function which works like so:
-
-```py
-def calc_hedge(hedge_data):
-    # Calculate the amount to bet on the opposing team
-    hedge_bet_amt = (hedge_data['bet_amount'] * hedge_data['bet_odds']) / hedge_data['hedge_odds']
-
-    # Calculate total bet amount
-    total_bet_amt = hedge_data['bet_amount'] + hedge_bet_amt
-
-    # Calculate profits
-    profit_if_initial_bet_wins = hedge_data['bet_amount'] * hedge_data['bet_odds'] - total_bet_amt
-    profit_if_hedge_bet_wins = hedge_bet_amt * hedge_data['hedge_odds'] - total_bet_amt
-    guaranteed_profit = min(profit_if_initial_bet_wins, profit_if_hedge_bet_wins)
-
-    # Calculate profit percentage
-    profit_percentage = (guaranteed_profit / total_bet_amt) * 100
-
-    # Update hedge_data dictionary
-    hedge_data.update({
-        'hedge_bet_amt': hedge_bet_amt,
-        'total_bet_amt': total_bet_amt,
-        'guaranteed_profit': guaranteed_profit,
-        'profit_percentage': profit_percentage
-    })
-
-    # Generate HTML output
-    html_output = "<h2>Hedging Calculation</h2>"
-    html_output += f"<p>Bet on {hedge_data['opp_team']}: ${hedge_bet_amt:.2f}</p>"
-    html_output += f"<p>Total wager: ${total_bet_amt:.2f}</p>"
-    html_output += f"<p>Guaranteed profit: ${guaranteed_profit:.2f}</p>"
-    html_output += f"<p>Profit percentage: {profit_percentage:.2f}%</p>"
-
-    return hedge_data, html_output
-```
 
 This function takes in all of the data about a hedging opportunity and calculates the amount you should bet on the hedge, the total bet amount, the guaranteed profit, and the profit percentage. It uses this data to either send back to the `auto_hedge_find()` function to be stored in the database or produce html output to be displayed on the web.
 
@@ -286,11 +157,11 @@ The key to my evaluation strategy revolves around analyzing underdog bettors, an
 
 The results show that the 5, 25, 50 and 100 percent profit threshold bets found a hedge 78.57, 48.41, 29.36, and 14.28 percent of the time respectively. This results suggest that hedging opportunities are fairly common especially those with a low-medium profit potential. Additionally it shows that highly profitable hedges are unlikely, they aren't exactly rare either. Keep in mind, that these profit thresholds are a minimum, so the 5 percent profit threshold includes all hedges up to 24.9 percent profit and so on. Granted these results include both sides of a bet from the same game, so they are slightly unrealistic, but still valuable. To account for this, and to simulate a more realistic betting strategy and environment the bets were split into two categories. One being underdog bets, meaning bets on the team less likely to win, and favorite bets, bets on the team that is more likely to win.
 
-![Bets That Found Hedges](images/bets-that-found-hedges-categorized.png)
+![Bets That Found Hedges Categorized](images/bets-that-found-hedges-categorized.png)
 
 This analysis provided more interesting insights on what strategies may be more or less viable. Bets on the favorite team at 5, 25, 50 and 100 percent target profit thresholds were able to find a hedging opportunity 86.15, 47.69, 18.46, and 0 percent of the time respectively. As you may have noticed teams that are the favorite at the beginning of the game are much more likely to yield minor hedging opportunities, but extremely rarely yield high profit hedging opportunities. This is due to the fact that bets on the favorite yield much lower profits to begin with, so the favorite doing well, which is traditionally what would create hedging opportunities has much less room to create profit via a hedge due to the diminishing returns as the profit for betting on the favorite approaches 0. On the other hand, underdog bets at the 5, 25, 50, and 100 percent profit thresholds created a hedging opportunity 70.49, 49.18, 40.98 and 29.51 percent of the time respectively. Thus, it is slightly less likely for underdogs to find hedging opportunities at the lower thresholds when compared to favorites, however it is far more likely for underdogs to create highly profitable hedging opportunities. This is due to the fact that underdogs are far more likely to get blown out from the start of the game when compared to favorites, which would eliminate hedging opportunities. On the other hand, when underdogs perform well the odds shift much more drastically, allowing for much greater profits through hedging. These results suggest that more risk tolerant bettors may want to consider betting on favorites, whereas risk seeking bettors may want to bet on underdogs. However, these results offer very vague insights without investigating the potential profitability of these strategies. To capture this, the theoretical profitability of these strategies was analyzed.
 
-![Bets That Found Hedges](images/expected-profit-categorized.png)
+![Expected Profit](images/expected-profit-categorized.png)
 
 These results are able to paint a much clearer picture of how a bettor may fair if they strictly followed any of the previously outlined strategies. There are some caveats to this analysis. Firstly, it assumes that a bettor who chooses a certain profit percentage will always decide to hedge at the first opportunity they are presented. Also, hedges were only searched for every 5 minutes, which means that there are likely more or less profitable hedging opportunities that were missed, particularly at the end of games where odds can swing wildly and quickly. Regardless, bettors betting only on favorites at 5, 25, 50 and 100 percent profit thresholds could expect -$0.76, -$1.07, -$1.29, and -$1.34 losses per bet respectively over the sample games. As is obvious all of these strategies yielded a net loss. Likewise, bettors who bet on only underdogs at the same thresholds could expect -$1.14, -$1.30, -$0.59, and -$0.18 losses per bet respectively over the sample games. While all of these strategies can expect losses, the results mirror that of the likelihood to find hedging opportunities for each of the given strategies. Also, betting on underdogs, especially at a high percentage profit threshold seems to be the ideal strategy. While it may seem like a fruitless strategy given that most of the strategies averaged somewhere between 2.5 and 6.5 percent losses, there is still value given the sportsbooks will offer odds at an 4.7 to 4.8 percent disadvantage at times. [@barnard2023] Which means these experiments are close to or beating the standard expected return.
 
